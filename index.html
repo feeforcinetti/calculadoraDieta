@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+<title>Calculadora de Dieta</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: formulário em 4 passos à esquerda, painel de resultado com meta diária, rosca de macros e refeições à direita; barra fixa de resumo no celular */
+:root {
+  --bg: #f3f6f4;
+  --surface: #ffffff;
+  --surface-2: #f6f9f7;
+  --ink: #0f1a15;
+  --muted: #5d6b64;
+  --line: #e2e8e4;
+  --accent: #0d8a4a;
+  --accent-ink: #ffffff;
+  --accent-soft: #dff3e8;
+  --p: #e2503f;
+  --c: #0d8a4a;
+  --f: #b97f0a;
+  --p-soft: #fde8e4;
+  --c-soft: #dff3e8;
+  --f-soft: #faefd3;
+  --warn: #8f5200;
+  --warn-soft: #fbefd6;
+  --hero-bg: #0d2a1c;
+  --hero-ink: #ecf8f1;
+  --hero-muted: #9cbfab;
+  --hero-line: rgba(255, 255, 255, .12);
+  --hero-tile: rgba(255, 255, 255, .07);
+  --hp: #ff8d7d;
+  --hc: #5fe0a0;
+  --hf: #f2c14e;
+  --shadow: 0 1px 2px rgba(15, 26, 21, .05), 0 6px 20px rgba(15, 26, 21, .05);
+  --font: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c110e; --surface: #151b17; --surface-2: #1b221e; --ink: #e9f0eb; --muted: #94a39a; --line: #263029;
+    --accent: #4fcf8a; --accent-ink: #06210f; --accent-soft: #163626; --p: #ff8d7d; --c: #5fe0a0; --f: #f2c14e;
+    --p-soft: #3a1d19; --c-soft: #163626; --f-soft: #352a0c; --warn: #f0b95a; --warn-soft: #33270f;
+    --hero-bg: #12362a; --shadow: 0 1px 2px rgba(0, 0, 0, .4); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c110e; --surface: #151b17; --surface-2: #1b221e; --ink: #e9f0eb; --muted: #94a39a; --line: #263029;
+  --accent: #4fcf8a; --accent-ink: #06210f; --accent-soft: #163626; --p: #ff8d7d; --c: #5fe0a0; --f: #f2c14e;
+  --p-soft: #3a1d19; --c-soft: #163626; --f-soft: #352a0c; --warn: #f0b95a; --warn-soft: #33270f;
+  --hero-bg: #12362a; --shadow: 0 1px 2px rgba(0, 0, 0, .4); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  padding-block: 20px 110px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (min-width: 880px) { body { padding-block: 32px 48px; } }
+.wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+header h1 { font-size: clamp(26px, 5vw, 34px); font-weight: 800; letter-spacing: -.02em; margin: 0; line-height: 1.15; text-wrap: balance; }
+header p { margin: 6px 0 0; color: var(--muted); max-width: 60ch; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (min-width: 880px) { .layout { grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 24px; } }
+.col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; box-shadow: var(--shadow); }
+.step-head { display: flex; align-items: center; gap: 10px; }
+.step-head .num { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 800; display: grid; place-items: center; }
+h2 { font-size: 16px; font-weight: 800; margin: 0; letter-spacing: -.01em; }
+h3 { font-size: 13px; font-weight: 700; margin: 0; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.lbl { font-size: 13px; font-weight: 600; color: var(--muted); }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+.example { font-size: 12.5px; color: var(--muted); margin: 0; }
+
+/* steppers */
+.steppers { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.stepper { display: grid; grid-template-columns: 38px minmax(0, 1fr) 38px; align-items: center; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.stepper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.stepper button { height: 44px; border: 0; background: transparent; color: var(--accent); font: inherit; font-size: 20px; font-weight: 700; cursor: pointer; }
+.stepper button:hover { background: var(--accent-soft); }
+.stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.stepper .val { display: flex; align-items: baseline; justify-content: center; gap: 4px; min-width: 0; }
+.stepper input { width: 100%; min-width: 0; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 18px; font-weight: 700; text-align: center; padding: 0; -moz-appearance: textfield; }
+.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.stepper input:focus { outline: none; }
+.stepper .unit { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+/* choice controls */
+.seg { display: grid; grid-template-columns: repeat(var(--n, 3), 1fr); gap: 4px; padding: 4px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; }
+.seg input, .chips input, .acts input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { text-align: center; padding: 10px 6px; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.seg input:checked + label { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.seg input:focus-visible + label, .chips input:focus-visible + label, .acts input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.acts { display: flex; flex-direction: column; gap: 8px; }
+.acts label { display: flex; flex-direction: column; gap: 1px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); cursor: pointer; }
+.acts label b { font-size: 14px; font-weight: 700; }
+.acts label span { font-size: 12.5px; color: var(--muted); }
+.acts input:checked + label { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent) inset; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips label { padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.chips input:checked + label { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.slider-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.slider-top output { font-size: 13px; font-weight: 800; color: var(--accent); background: var(--accent-soft); padding: 3px 10px; border-radius: 999px; }
+input[type="range"] { width: 100%; accent-color: var(--accent); height: 28px; margin: 0; }
+input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); cursor: pointer; }
+.switch span { font-size: 14px; font-weight: 600; }
+.switch input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
+.sel { font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; width: 100%; }
+.sel:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* results */
+.hero { background: var(--hero-bg); color: var(--hero-ink); border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 18px; min-width: 0; border: 1px solid var(--hero-line); }
+.hero-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.hero-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.hero-text .k { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--hero-muted); }
+.hero-text .big { font-size: clamp(44px, 9vw, 60px); font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+.hero-text .big small { font-size: 18px; font-weight: 600; color: var(--hero-muted); letter-spacing: 0; margin-left: 6px; }
+.hero-text .sub { font-size: 13.5px; color: var(--hero-muted); }
+.donut { width: 132px; height: 132px; flex: none; }
+.donut text { fill: var(--hero-ink); font-family: var(--font); }
+.macro3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.mt { background: var(--hero-tile); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mt .n { font-size: 12.5px; font-weight: 700; color: var(--hero-muted); display: flex; align-items: center; gap: 6px; }
+.mt .n i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.mt .g { font-size: clamp(20px, 4.4vw, 26px); font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+.mt .g small { font-size: 12px; font-weight: 600; color: var(--hero-muted); }
+.mt .s { font-size: 12px; color: var(--hero-muted); }
+.warn { background: var(--warn-soft); color: var(--warn); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; font-weight: 600; margin: 0; }
+.mini { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.mini .t { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 2px; }
+.mini .t .k { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.mini .t .v { font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+.mini .t .v small { font-size: 12px; font-weight: 600; color: var(--muted); }
+details.calc summary { cursor: pointer; font-size: 14px; font-weight: 700; color: var(--accent); list-style: none; display: flex; align-items: center; gap: 6px; }
+details.calc summary::-webkit-details-marker { display: none; }
+details.calc summary::before { content: "▸"; transition: transform .15s; display: inline-block; }
+details.calc[open] summary::before { transform: rotate(90deg); }
+details.calc summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+.calc-body { margin: 12px 0 0; display: flex; flex-direction: column; gap: 8px; }
+.calc-body div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+.calc-body div span:first-child { color: var(--muted); }
+.calc-body div b { text-align: right; }
+.meals { display: flex; flex-direction: column; gap: 10px; }
+.meal { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; background: var(--surface-2); }
+.meal-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.meal-top b { font-size: 14.5px; font-weight: 700; }
+.meal-top span { font-size: 13px; color: var(--muted); font-weight: 600; }
+.tag { font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); margin-left: 8px; }
+.pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill { font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+.pill.p { background: var(--p-soft); color: var(--p); }
+.pill.c { background: var(--c-soft); color: var(--c); }
+.pill.f { background: var(--f-soft); color: var(--f); }
+.rules { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.rules li { display: flex; gap: 10px; font-size: 14px; }
+.rules li::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-top: 8px; }
+.copy { align-self: flex-start; font: inherit; font-size: 14px; font-weight: 700; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 12px; padding: 12px 18px; cursor: pointer; }
+.copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.foot { font-size: 12.5px; color: var(--muted); }
+
+/* dock (celular) */
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--hero-bg); color: var(--hero-ink); border-top: 1px solid var(--hero-line);
+  padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.dock button { all: unset; box-sizing: border-box; width: 100%; max-width: 1120px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
+.dock button:focus-visible { outline: 2px solid var(--hc); outline-offset: 4px; border-radius: 6px; }
+.dock .d-k { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--hero-muted); display: block; }
+.dock .d-v { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.dock .d-v small { font-size: 13px; font-weight: 600; color: var(--hero-muted); margin-left: 4px; }
+.dock .d-m { font-size: 13px; font-weight: 700; text-align: right; }
+.dock .d-m span { margin-left: 8px; }
+.dock .d-go { font-size: 12px; font-weight: 700; color: var(--hc); display: block; margin-top: 2px; }
+@media (min-width: 880px) { .dock { display: none; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Calculadora de Dieta</h1>
+    <p>Preencha os quatro passos. TMB e GET saem de Mifflin-St Jeor e o resultado se atualiza sozinho.</p>
+  </header>
+
+  <div class="layout">
+    <div class="col">
+      <section class="card" aria-labelledby="h1s">
+        <div class="step-head"><span class="num">1</span><h2 id="h1s">Seus dados</h2></div>
+        <div class="field">
+          <span class="lbl">Sexo</span>
+          <div class="seg" style="--n:2" role="radiogroup" aria-label="Sexo">
+            <input type="radio" name="sex" id="sex-m" value="m" checked><label for="sex-m">Masculino</label>
+            <input type="radio" name="sex" id="sex-f" value="f"><label for="sex-f">Feminino</label>
+          </div>
+        </div>
+        <div class="steppers">
+          <div class="field"><label class="lbl" for="age">Idade</label>
+            <div class="stepper"><button type="button" data-t="age" data-d="-1" aria-label="Diminuir idade">−</button><div class="val"><input id="age" type="number" min="14" max="90" step="1" value="30" inputmode="numeric"><span class="unit">anos</span></div><button type="button" data-t="age" data-d="1" aria-label="Aumentar idade">+</button></div></div>
+          <div class="field"><label class="lbl" for="w">Peso</label>
+            <div class="stepper"><button type="button" data-t="w" data-d="-0.5" aria-label="Diminuir peso">−</button><div class="val"><input id="w" type="number" min="30" max="250" step="0.1" value="86" inputmode="decimal"><span class="unit">kg</span></div><button type="button" data-t="w" data-d="0.5" aria-label="Aumentar peso">+</button></div></div>
+          <div class="field"><label class="lbl" for="h">Altura</label>
+            <div class="stepper"><button type="button" data-t="h" data-d="-1" aria-label="Diminuir altura">−</button><div class="val"><input id="h" type="number" min="120" max="230" step="1" value="178" inputmode="numeric"><span class="unit">cm</span></div><button type="button" data-t="h" data-d="1" aria-label="Aumentar altura">+</button></div></div>
+        </div>
+        <p class="example">Valores de exemplo (86 kg vem do seu quadro). Troque pelos dados reais.</p>
+        <div class="field">
+          <span class="lbl">Nível de atividade</span>
+          <div class="acts" role="radiogroup" aria-label="Nível de atividade">
+            <input type="radio" name="act" id="a1" value="1.2"><label for="a1"><b>Sedentário</b><span>Pouco ou nenhum exercício · 1,2</span></label>
+            <input type="radio" name="act" id="a2" value="1.375"><label for="a2"><b>Leve</b><span>1 a 3 treinos por semana · 1,375</span></label>
+            <input type="radio" name="act" id="a3" value="1.55" checked><label for="a3"><b>Moderado</b><span>3 a 5 treinos por semana · 1,55</span></label>
+            <input type="radio" name="act" id="a4" value="1.725"><label for="a4"><b>Intenso</b><span>6 a 7 treinos por semana · 1,725</span></label>
+            <input type="radio" name="act" id="a5" value="1.9"><label for="a5"><b>Muito intenso</b><span>Treino 2x ao dia ou trabalho físico pesado · 1,9</span></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="h2s">
+        <div class="step-head"><span class="num">2</span><h2 id="h2s">Objetivo</h2></div>
+        <div class="seg" role="radiogroup" aria-label="Objetivo">
+          <input type="radio" name="goal" id="g-cut" value="cut" checked><label for="g-cut">Déficit</label>
+          <input type="radio" name="goal" id="g-main" value="main"><label for="g-main">Manter</label>
+          <input type="radio" name="goal" id="g-bulk" value="bulk"><label for="g-bulk">Superávit</label>
+        </div>
+        <div class="field" id="rateField">
+          <div class="slider-top"><label class="lbl" for="rate">Variação semanal do peso</label><output id="rateOut" for="rate"></output></div>
+          <input id="rate" type="range" min="0.5" max="1" step="0.05" value="0.5">
+          <p class="hint">De 0,5 a 1% do peso por semana. 1 kg de gordura equivale a 7.700 kcal.</p>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="h3s">
+        <div class="step-head"><span class="num">3</span><h2 id="h3s">Macros</h2></div>
+        <div class="field">
+          <span class="lbl">Proteína</span>
+          <div class="chips" role="radiogroup" aria-label="Faixa de proteína">
+            <input type="radio" name="ptnPreset" id="pp-b" value="b" checked><label for="pp-b">1,8 a 2,3 g/kg</label>
+            <input type="radio" name="ptnPreset" id="pp-a" value="a"><label for="pp-a">2,1 a 3,2 g/kg</label>
+            <input type="radio" name="ptnPreset" id="pp-c" value="c"><label for="pp-c">2,5 g/kg · low carb</label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="slider-top"><label class="lbl" for="ptn">Proteína dentro da faixa</label><output id="ptnOut" for="ptn"></output></div>
+          <input id="ptn" type="range" min="1.8" max="2.3" step="0.1" value="2.0">
+        </div>
+        <div class="field">
+          <div class="slider-top"><label class="lbl" for="lip">Lipídios</label><output id="lipOut" for="lip"></output></div>
+          <input id="lip" type="range" min="0.7" max="1" step="0.05" value="0.8">
+          <p class="hint">De 0,7 a 1 g/kg, ou 10 a 15% do VET. O carboidrato é o restante das calorias.</p>
+        </div>
+        <label class="switch" for="ir"><span>Resistência à insulina</span><input id="ir" type="checkbox"></label>
+        <div class="field" id="irField" hidden>
+          <div class="slider-top"><label class="lbl" for="irCap">Teto de carboidrato (% do VET)</label><output id="irOut" for="irCap"></output></div>
+          <input id="irCap" type="range" min="40" max="45" step="1" value="45">
+          <p class="hint">O que passar do teto vai para os lipídios.</p>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="h4s">
+        <div class="step-head"><span class="num">4</span><h2 id="h4s">Refeições</h2></div>
+        <div class="field">
+          <label class="lbl" for="meals">Refeições por dia</label>
+          <select id="meals" class="sel">
+            <option value="3">3 refeições</option><option value="4" selected>4 refeições</option><option value="5">5 refeições</option><option value="6">6 refeições</option>
+          </select>
+        </div>
+      </section>
+    </div>
+
+    <div class="col" id="results" aria-live="polite"></div>
+  </div>
+  <p class="foot">Ferramenta de apoio ao cálculo. A conduta final é do profissional responsável.</p>
+</div>
+
+<div class="dock" id="dock"><button type="button" id="dockBtn" aria-label="Ver resultado completo"></button></div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = function (n, d) { return Number(n).toLocaleString("pt-BR", { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }); };
+  var radio = function (name) { return document.querySelector('input[name="' + name + '"]:checked').value; };
+  var PTN = { a: { min: 2.1, max: 3.2, val: 2.5 }, b: { min: 1.8, max: 2.3, val: 2.0 }, c: { min: 2.5, max: 2.5, val: 2.5 } };
+  var calcOpen = false;
+
+  function syncPtn() {
+    var p = PTN[radio("ptnPreset")], s = $("ptn");
+    s.min = p.min; s.max = p.max; s.value = p.val; s.disabled = p.min === p.max;
+  }
+
+  function compute() {
+    var sex = radio("sex"), goal = radio("goal"), act = +radio("act");
+    var age = +$("age").value, w = +$("w").value, h = +$("h").value;
+    var pct = +$("rate").value, pg = +$("ptn").value, lg = +$("lip").value;
+    var n = +$("meals").value, ir = $("ir").checked, cap = +$("irCap").value;
+    if (!(w > 0 && h > 0 && age > 0)) return null;
+    var tmb = 10 * w + 6.25 * h - 5 * age + (sex === "m" ? 5 : -161);
+    var get = tmb * act;
+    var kgWeek = goal === "main" ? 0 : w * pct / 100;
+    var weekly = kgWeek * 7700, daily = weekly / 7;
+    var kcal = goal === "cut" ? get - daily : goal === "bulk" ? get + daily : get;
+    var ptn = w * pg, lip = w * lg;
+    var cho = (kcal - ptn * 4 - lip * 9) / 4, moved = 0;
+    if (ir) {
+      var capG = kcal * cap / 100 / 4;
+      if (cho > capG) { moved = (cho - capG) * 4; cho = capG; lip = (kcal - ptn * 4 - cho * 4) / 9; }
+    }
+    var warns = [];
+    if (cho <= 0) warns.push("Proteína e lipídios já passam das calorias da meta. Reduza os g/kg ou o déficit.");
+    if (kcal < tmb) warns.push("A meta (" + fmt(kcal) + " kcal) está abaixo da TMB (" + fmt(tmb) + " kcal). Revise o déficit.");
+    var lipPct = lip * 9 / kcal * 100;
+    if (lipPct < 10) warns.push("Lipídios em " + fmt(lipPct, 1) + "% do VET, abaixo do mínimo de 10%.");
+    return { goal: goal, w: w, tmb: tmb, get: get, pct: pct, kgWeek: kgWeek, weekly: weekly, daily: daily, kcal: kcal,
+      ptn: ptn, lip: lip, cho: Math.max(cho, 0), pg: pg, ir: ir, cap: cap, moved: moved, warns: warns, n: n, fiber: 14 * kcal / 1000 };
+  }
+
+  function donut(pP, pC, pF) {
+    var R = 52, C = 2 * Math.PI * R, gap = 3, segs = [[pP, "var(--hp)"], [pC, "var(--hc)"], [pF, "var(--hf)"]], off = 0, out = "";
+    segs.forEach(function (s) {
+      var len = Math.max(s[0] / 100 * C - gap, 0);
+      out += "<circle cx='66' cy='66' r='" + R + "' fill='none' stroke='" + s[1] + "' stroke-width='14' stroke-dasharray='" + len + " " + (C - len) + "' stroke-dashoffset='" + (-off) + "' transform='rotate(-90 66 66)'/>";
+      off += s[0] / 100 * C;
+    });
+    return "<svg class='donut' viewBox='0 0 132 132' role='img' aria-label='Divisão das calorias: proteína " + fmt(pP) + "%, carboidrato " + fmt(pC) + "%, lipídios " + fmt(pF) + "%'>" +
+      "<circle cx='66' cy='66' r='" + R + "' fill='none' stroke='rgba(255,255,255,.1)' stroke-width='14'/>" + out +
+      "<text x='66' y='64' text-anchor='middle' font-size='11' font-weight='700' style='opacity:.7'>% DO VET</text>" +
+      "<text x='66' y='82' text-anchor='middle' font-size='13' font-weight='800'>" + fmt(pP) + " · " + fmt(pC) + " · " + fmt(pF) + "</text></svg>";
+  }
+
+  function mealsHtml(r) {
+    var weights = [], i;
+    for (i = 0; i < r.n; i++) weights.push(i === r.n - 1 ? 0.5 : 1);
+    var sum = weights.reduce(function (a, b) { return a + b; }, 0), out = "";
+    for (i = 0; i < r.n; i++) {
+      var p = r.ptn / r.n, f = r.lip / r.n, c = r.cho * weights[i] / sum, k = p * 4 + c * 4 + f * 9;
+      var tag = i === 0 ? "<span class='tag'>café da manhã</span>" : i === r.n - 1 ? "<span class='tag'>menos carbo</span>" : "";
+      out += "<div class='meal'><div class='meal-top'><div><b>Refeição " + (i + 1) + "</b>" + tag + "</div><span>" + fmt(k) + " kcal</span></div>" +
+        "<div class='pills'><span class='pill p'>P " + fmt(p) + " g</span><span class='pill c'>C " + fmt(c) + " g</span><span class='pill f'>G " + fmt(f) + " g</span></div></div>";
+    }
+    return out;
+  }
+
+  function summary(r) {
+    return ["TMB (Mifflin): " + fmt(r.tmb) + " kcal | GET: " + fmt(r.get) + " kcal", "Meta: " + fmt(r.kcal) + " kcal/dia",
+      "Proteína: " + fmt(r.ptn) + " g (" + fmt(r.pg, 1) + " g/kg)", "Carboidrato: " + fmt(r.cho) + " g",
+      "Lipídios: " + fmt(r.lip) + " g", "Fibras: " + fmt(r.fiber) + " g | Frutas: 3 porções/dia", "Refeições: " + r.n + "/dia"].join("\n");
+  }
+
+  function render() {
+    $("rateOut").textContent = fmt(+$("rate").value, 2) + "% / semana";
+    $("ptnOut").textContent = fmt(+$("ptn").value, 1) + " g/kg";
+    $("lipOut").textContent = fmt(+$("lip").value, 2) + " g/kg";
+    $("irOut").textContent = $("irCap").value + "%";
+    $("irField").hidden = !$("ir").checked;
+    $("rateField").hidden = radio("goal") === "main";
+
+    var r = compute(), el = $("results");
+    if (!r) { el.innerHTML = "<section class='card'><p class='hint'>Preencha idade, peso e altura.</p></section>"; $("dockBtn").innerHTML = ""; return; }
+    var kP = r.ptn * 4, kC = r.cho * 4, kF = r.lip * 9, kT = kP + kC + kF;
+    var pP = kP / kT * 100, pC = kC / kT * 100, pF = kF / kT * 100;
+    var gname = r.goal === "cut" ? "Déficit" : r.goal === "bulk" ? "Superávit" : "Balanço";
+    var sign = r.goal === "bulk" ? "+" : "−";
+    var html = r.warns.map(function (w) { return "<p class='warn'>" + w + "</p>"; }).join("");
+
+    html += "<section class='hero' aria-label='Resultado'><div class='hero-top'><div class='hero-text'><span class='k'>Meta diária</span>" +
+      "<span class='big'>" + fmt(r.kcal) + "<small>kcal</small></span>" +
+      "<span class='sub'>TMB " + fmt(r.tmb) + " · GET " + fmt(r.get) + (r.goal === "main" ? "" : " · " + gname.toLowerCase() + " " + fmt(r.daily) + "/dia") + "</span></div>" +
+      donut(pP, pC, pF) + "</div>" +
+      "<div class='macro3'>" +
+      "<div class='mt'><span class='n'><i style='background:var(--hp)'></i>Proteína</span><span class='g'>" + fmt(r.ptn) + "<small> g</small></span><span class='s'>" + fmt(r.ptn / r.w, 2) + " g/kg</span></div>" +
+      "<div class='mt'><span class='n'><i style='background:var(--hc)'></i>Carboidrato</span><span class='g'>" + fmt(r.cho) + "<small> g</small></span><span class='s'>" + fmt(r.cho / r.w, 2) + " g/kg</span></div>" +
+      "<div class='mt'><span class='n'><i style='background:var(--hf)'></i>Lipídios</span><span class='g'>" + fmt(r.lip) + "<small> g</small></span><span class='s'>" + fmt(r.lip / r.w, 2) + " g/kg</span></div>" +
+      "</div></section>";
+
+    var calc = "<section class='card'><details class='calc'" + (calcOpen ? " open" : "") + "><summary>Ver a conta da meta</summary><div class='calc-body'>" +
+      "<div><span>TMB (Mifflin-St Jeor)</span><b>" + fmt(r.tmb) + " kcal</b></div>" +
+      "<div><span>GET = TMB × atividade</span><b>" + fmt(r.get) + " kcal</b></div>";
+    if (r.goal !== "main") {
+      calc += "<div><span>" + fmt(r.w, 1) + " kg × " + fmt(r.pct, 2) + "%</span><b>" + fmt(r.kgWeek * 1000) + " g/semana</b></div>" +
+        "<div><span>" + fmt(r.kgWeek, 3) + " kg × 7.700 kcal</span><b>" + fmt(r.weekly) + " kcal/semana</b></div>" +
+        "<div><span>GET semanal " + fmt(r.get * 7) + " " + sign + " " + fmt(r.weekly) + "</span><b>" + fmt(r.kcal * 7) + " kcal</b></div>" +
+        "<div><span>" + fmt(r.kcal * 7) + " ÷ 7</span><b>" + fmt(r.kcal) + " kcal/dia</b></div>";
+    } else {
+      calc += "<div><span>Manutenção</span><b>meta = GET</b></div>";
+    }
+    calc += "</div>" + (r.ir ? "<p class='hint' style='margin-top:10px'>Resistência à insulina: carboidrato limitado a " + r.cap + "% do VET" +
+      (r.moved > 0 ? "; " + fmt(r.moved) + " kcal foram para os lipídios." : ". O teto não foi atingido.") + "</p>" : "") + "</details></section>";
+    html += calc;
+
+    html += "<section class='card'><h3>Distribuição por refeição</h3><div class='meals'>" + mealsHtml(r) + "</div>" +
+      "<ul class='rules'><li>Proteína semelhante em cada porção (" + fmt(r.ptn / r.n) + " g).</li>" +
+      "<li>Proteína adequada no café da manhã ajuda na fome e na saciedade.</li>" +
+      "<li>Menos carboidrato à noite favorece a sensibilidade à insulina. A última refeição recebe metade da parcela das outras (sugestão).</li></ul></section>";
+
+    html += "<section class='card'><h3>Fibras e frutas</h3><div class='mini'>" +
+      "<div class='t'><span class='k'>Fibras</span><span class='v'>" + fmt(r.fiber) + " <small>g/dia</small></span></div>" +
+      "<div class='t'><span class='k'>Frutas</span><span class='v'>3 <small>porções/dia</small></span></div>" +
+      "<div class='t'><span class='k'>Referência</span><span class='v'>14 <small>g/1.000 kcal</small></span></div></div></section>";
+
+    html += "<button class='copy' id='copyBtn' type='button'>Copiar resumo</button>";
+    el.innerHTML = html;
+
+    $("dockBtn").innerHTML = "<span><span class='d-k'>Meta diária</span><span class='d-v'>" + fmt(r.kcal) + "<small>kcal</small></span></span>" +
+      "<span class='d-m'><span style='color:var(--hp)'>P " + fmt(r.ptn) + "</span><span style='color:var(--hc)'>C " + fmt(r.cho) + "</span><span style='color:var(--hf)'>G " + fmt(r.lip) + "</span><span class='d-go'>Ver detalhes ↓</span></span>";
+
+    $("copyBtn").onclick = function () {
+      var btn = $("copyBtn");
+      function done(ok) { btn.textContent = ok ? "Copiado" : "Selecione e copie manualmente"; setTimeout(function () { btn.textContent = "Copiar resumo"; }, 1800); }
+      try { navigator.clipboard.writeText(summary(r)).then(function () { done(true); }, function () { done(false); }); } catch (e) { done(false); }
+    };
+  }
+
+  document.querySelectorAll(".stepper button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var inp = $(b.getAttribute("data-t")), d = parseFloat(b.getAttribute("data-d"));
+      var v = Math.round(((+inp.value || 0) + d) * 10) / 10;
+      v = Math.min(Math.max(v, +inp.min), +inp.max);
+      inp.value = v;
+      render();
+    });
+  });
+  $("results").addEventListener("toggle", function (e) { if (e.target.classList && e.target.classList.contains("calc")) calcOpen = e.target.open; }, true);
+  $("dockBtn").addEventListener("click", function () { $("results").scrollIntoView({ behavior: "smooth", block: "start" }); });
+  document.querySelectorAll('input[name="ptnPreset"]').forEach(function (el) { el.addEventListener("change", function () { syncPtn(); render(); }); });
+  document.querySelectorAll("input, select").forEach(function (el) { el.addEventListener("input", render); el.addEventListener("change", render); });
+  syncPtn();
+  render();
+})();
+</script>
+
+</body>
+</html>
